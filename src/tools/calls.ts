@@ -1,9 +1,9 @@
 export async function makeCall(toNumber: string, task: string): Promise<string> {
-  const response = await fetch('https://api.vapi.ai/call/phone', {
+  const response = await fetch('https://api.vapi.ai/call', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.VAPI_API_KEY}`
+      Authorization: `Bearer ${process.env.VAPI_PRIVATE_KEY}`
     },
     body: JSON.stringify({
       phoneNumberId: process.env.VAPI_PHONE_ID,
@@ -12,15 +12,10 @@ export async function makeCall(toNumber: string, task: string): Promise<string> 
         firstMessage: `Hi, I'm calling on behalf of Gautam. ${task}`,
         model: {
           provider: 'anthropic',
-          model: 'claude-sonnet-4-6',
-          messages: [
-            {
-              role: 'system',
-              content: `You are calling on behalf of Gautam Agarwal. Your task: ${task}. Be polite, concise, and professional. Get the job done in under 2 minutes.`
-            }
-          ]
+          model: 'claude-haiku-4-5-20251001',
+          systemPrompt: `You are calling on behalf of Gautam Agarwal. Your task: ${task}. Be polite, concise, and professional. Get the job done in under 2 minutes.`
         },
-        voice: { provider: 'vapi', voiceId: 'elliot' }
+        voice: { provider: 'vapi', voiceId: 'Elliot' }
       }
     })
   });

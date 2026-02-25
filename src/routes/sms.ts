@@ -15,14 +15,16 @@ router.post('/', async (req: Request, res: Response) => {
   // }
 
   try {
+    console.log('[SMS] Running agent...');
     const reply = await runAgent(Body, 'sms');
+    console.log('[SMS] Reply:', reply?.slice(0, 100));
 
     const twiml = new twilio.twiml.MessagingResponse();
     twiml.message(reply);
 
     res.type('text/xml').send(twiml.toString());
   } catch (err: any) {
-    console.error('[SMS] Error:', err.message);
+    console.error('[SMS] Error:', err.message, err.stack);
     const twiml = new twilio.twiml.MessagingResponse();
     twiml.message('Something went wrong. Try again.');
     res.type('text/xml').send(twiml.toString());
