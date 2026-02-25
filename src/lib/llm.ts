@@ -57,13 +57,12 @@ async function askClaude(
   });
 
   const text = response.content
-    .filter(b => b.type === 'text')
-    .map(b => (b as Anthropic.TextBlock).text)
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map(b => b.text)
     .join('');
 
   const toolCalls = response.content
-    .filter(b => b.type === 'tool_use')
-    .map(b => b as Anthropic.ToolUseBlock)
+    .filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
     .map(b => ({ name: b.name, input: b.input as Record<string, any>, id: b.id }));
 
   return { text, toolCalls };
