@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Memory {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  channel   String    // "sms" | "voice" | "email"
+  role      String    // "user" | "assistant"
+  content   String
+  createdAt DateTime  @default(now())
+}
+
+model Reminder {
+  id          String   @id @default(cuid())
+  text        String
+  fireAt      DateTime
+  fired       Boolean  @default(false)
+  channel     String   @default("sms") // where to send the reminder
+  createdAt   DateTime @default(now())
+}
