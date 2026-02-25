@@ -1,15 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
-import OpenAI from 'openai';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// xAI Grok is OpenAI-compatible
-const grok = new OpenAI({
-  apiKey: process.env.XAI_API_KEY,
-  baseURL: 'https://api.x.ai/v1'
-});
-
-export type Model = 'claude' | 'gpt4o' | 'grok' | 'auto';
+export type Model = 'claude' | 'grok' | 'auto';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -19,27 +12,30 @@ export interface Message {
 // Route to the right model based on task
 function pickModel(message: string): Model {
   const lower = message.toLowerCase();
-  if (lower.includes('twitter') || lower.includes('x.com') || lower.includes('trending') || lower.includes('elon')) {
+  if (
+    lower.includes('twitter') ||
+    lower.includes('x.com') ||
+    lower.includes('trending') ||
+    lower.includes('elon')
+  ) {
     return 'grok'; // Grok has live X data
   }
-  return 'claude'; // Claude is default — best tool use
+  return 'claude'; // default — best tool use
 }
 
 export async function askLLM(
   message: string,
   history: Message[],
-  tools: Anthropic.Tool[],
+  tools: Anthropic.Tool[] = [],
   model: Model = 'auto'
 ): Promise<{ text: string; toolCalls: Array<{ name: string; input: Record<string, any>; id: string }> }> {
   const resolvedModel = model === 'auto' ? pickModel(message) : model;
 
-  if (resolvedModel === 'claude') {
-    return askClaude(message, history, tools);
-  } else if (resolvedModel === 'grok') {
+  if (resolvedModel === 'grok' && process.env.XAI_API_KEY) {
     return askGrok(message, history);
-  } else {
-    return askClaude(message, history, tools); // fallback
   }
+
+  return askClaude(message, history, tools);
 }
 
 async function askClaude(
@@ -73,28 +69,35 @@ async function askClaude(
   return { text, toolCalls };
 }
 
+// Grok via xAI REST API (OpenAI-compatible format, no SDK needed)
 async function askGrok(
   message: string,
   history: Message[]
 ): Promise<{ text: string; toolCalls: Array<{ name: string; input: Record<string, any>; id: string }> }> {
-  const messages: OpenAI.ChatCompletionMessageParam[] = [
-    { role: 'system', content: getSystemPrompt() },
-    ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-    { role: 'user', content: message }
-  ];
-
-  const response = await grok.chat.completions.create({
-    model: 'grok-2-latest',
-    messages
+  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.XAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'grok-2-latest',
+      messages: [
+        { role: 'system', content: getSystemPrompt() },
+        ...history.map(m => ({ role: m.role, content: m.content })),
+        { role: 'user', content: message }
+      ]
+    })
   });
 
+  const data = await response.json() as any;
   return {
-    text: response.choices[0]?.message?.content || '',
+    text: data.choices?.[0]?.message?.content || '',
     toolCalls: []
   };
 }
 
-function getSystemPrompt(): string {
+export function getSystemPrompt(): string {
   return `You are Gautam's personal AI assistant. You are direct, sharp, and helpful.
 
 PERSONALITY:
